@@ -8,6 +8,7 @@ class Board {
   constructor(req) {
     this.body = req.body;
     this.params = req.params;
+    this.auth = req.auth;
   }
 
   async createBoardNum() {

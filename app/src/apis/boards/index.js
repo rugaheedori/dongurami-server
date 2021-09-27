@@ -3,6 +3,7 @@
 const express = require('express');
 const boardCtrl = require('./board.ctrl');
 const commentCtrl = require('./comment.ctrl');
+const identityCheck = require('../../middlewares/identify-auth');
 
 const router = express.Router();
 
@@ -18,7 +19,11 @@ router.get(
   '/promotion/:clubCategory/:sort/:order',
   boardCtrl.process.findAllByPromotionCategory
 );
-router.get('/:category/:boardNum', boardCtrl.process.findOneByBoardNum);
+router.get(
+  '/:category/:boardNum',
+  identityCheck.identityCheck,
+  boardCtrl.process.findOneByBoardNum
+);
 
 router.put('/:category/:boardNum', boardCtrl.process.updateOneByBoardNum);
 router.put(

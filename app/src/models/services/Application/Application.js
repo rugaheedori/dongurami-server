@@ -120,11 +120,24 @@ class Application {
         extra: answer.extra,
       };
 
+      if (!(answerInfo.grade && answerInfo.gender && answerInfo.phoneNum)) {
+        return { success: false, msg: '필수 답변을 전부 기입해주세요.' };
+      }
+
+      const phoneNumberRegExp = /^[0-9]+$/;
+
+      if (
+        answerInfo.phoneNum.length !== 11 ||
+        !answerInfo.phoneNum.match(phoneNumberRegExp)
+      ) {
+        return { success: false, msg: '전화번호 형식이 맞지 않습니다.' };
+      }
+
       const isBasic = await ApplicationStorage.createBasicAnswer(answerInfo);
 
       // 필수 질문 추가 완 x
       if (!isBasic) {
-        return { success: false, msg: '필수 질문이 작성되지않았습니다.' };
+        return { success: false, msg: '필수 답변이 작성되지 않았습니다.' };
       }
 
       // 필수 질문 추가 완 / 추가 질문 여부
@@ -144,7 +157,7 @@ class Application {
         }
 
         if (isExtra !== answerInfo.extra.length) {
-          return { success: false, msg: '추가 질문이 작성되지 않았습니다.' };
+          return { success: false, msg: '추가 답변이 작성되지 않았습니다.' };
         }
       }
       // 질문 추가 완 => 동아리 지원자 테이블 추가
@@ -182,7 +195,7 @@ class Application {
     const notification = new Notification(this.req);
 
     try {
-      const senderId = this.auth.id;
+      const senderName = this.auth.name;
       const userInfo = {
         clubNum,
         applicant: body.applicant,
@@ -192,20 +205,25 @@ class Application {
         userInfo
       );
 
-      const clubName = await NotificationStorage.findOneByClubNum(clubNum);
-
       if (isUpdate) {
         const isCreate = await ApplicationStorage.createMemberById(userInfo);
 
         if (isCreate) {
+          const clubName = await NotificationStorage.findOneByClubNum(
+            userInfo.clubNum
+          );
+
+          const recipientName =
+            await ApplicationStorage.findOneByApplicantIdAndClubNum(userInfo);
+
           const notificationInfo = {
-            senderId,
-            recipientId: userInfo.applicant,
+            senderName,
+            recipientName,
             clubName,
             content: '동아리 가입 신청 결과',
           };
 
-          await notification.createByIdAndClubName(notificationInfo);
+          await notification.createNotification(notificationInfo);
 
           return { success: true, msg: '동아리 가입 신청을 승인하셨습니다.' };
         }
@@ -229,7 +247,7 @@ class Application {
     const notification = new Notification(this.req);
 
     try {
-      const senderId = this.auth.id;
+      const senderName = this.auth.name;
       const userInfo = {
         clubNum,
         applicant: body.applicant,
@@ -238,17 +256,22 @@ class Application {
         userInfo
       );
 
-      const clubName = await NotificationStorage.findOneByClubNum(clubNum);
-
       if (isUpdate) {
+        const clubName = await NotificationStorage.findOneByClubNum(
+          userInfo.clubNum
+        );
+
+        const applicantName =
+          await ApplicationStorage.findOneByApplicantIdAndClubNum(userInfo);
+
         const notificationInfo = {
-          senderId,
-          recipientId: userInfo.applicant,
+          senderName,
           clubName,
+          recipientName: applicantName,
           content: '동아리 가입 신청 결과',
         };
 
-        await notification.createByIdAndClubName(notificationInfo);
+        await notification.createNotification(notificationInfo);
 
         return { success: true, msg: '동아리 가입 신청을 거절하셨습니다.' };
       }

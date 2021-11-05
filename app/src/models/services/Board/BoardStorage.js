@@ -124,7 +124,7 @@ class BoardStorage {
     try {
       conn = await mariadb.getConnection();
 
-      const query = `SELECT bo.no, bo.student_id AS studentId, st.name, bo.title, bo.description, clubs.no AS clubNo, clubs.name AS clubName, clubs.category, bo.in_date AS inDate, bo.modify_date AS modifyDate, bo.hit
+      const query = `SELECT bo.no, bo.student_id AS studentId, st.name, bo.title, bo.description, clubs.no AS clubNo, clubs.name AS clubName, clubs.category, bo.in_date AS inDate, bo.modify_date AS modifyDate, bo.hit, st.profile_image_url AS profileImageUrl
       FROM boards AS bo
       JOIN students AS st
       ON bo.student_id = st.id
@@ -232,7 +232,7 @@ class BoardStorage {
     try {
       conn = await mariadb.getConnection();
 
-      const keyword = `%${searchInfo.keyword}%`;
+      const keyword = `%${searchInfo.keyword.replace(/(\s*)/g, '')}%`;
       const query = `
       SELECT bo.no, bo.title, bo.student_id AS studentId, st.name AS studentName, bo.club_no AS clubNo, clubs.name AS clubName, bo.board_category_no AS boardCategoryNo, bo.in_date AS inDate, bo.modify_date AS modifyDate, img.url, bo.hit
       FROM boards AS bo
@@ -242,7 +242,7 @@ class BoardStorage {
       ON bo.student_id = st.id
       JOIN clubs
       ON bo.club_no = clubs.no
-      WHERE ${searchInfo.type} LIKE ? AND board_category_no = ? AND club_no = ?
+      WHERE REPLACE(${searchInfo.type}, ' ', '') LIKE ? AND board_category_no = ? AND club_no = ?
       ORDER BY ${searchInfo.sort} ${searchInfo.order};`;
 
       const boards = await conn.query(query, [
@@ -265,7 +265,7 @@ class BoardStorage {
     try {
       conn = await mariadb.getConnection();
 
-      const keyword = `%${searchInfo.keyword}%`;
+      const keyword = `%${searchInfo.keyword.replace(/(\s*)/g, '')}%`;
       let where = '';
       let limit = '';
 
@@ -288,7 +288,7 @@ class BoardStorage {
       ON bo.student_id = st.id
       JOIN clubs
       ON bo.club_no = clubs.no
-      WHERE ${searchInfo.type} LIKE ? AND board_category_no = 4${where}
+      WHERE REPLACE(${searchInfo.type}, ' ', '') LIKE ? AND board_category_no = 4${where}
       GROUP BY no
       ORDER BY ${searchInfo.sort} ${searchInfo.order}
       ${limit};`;
@@ -303,17 +303,19 @@ class BoardStorage {
     }
   }
 
-  static async findStudentIdAndTitleByBoardNum(boardNum) {
+  static async findRecipientNameAndTitleByBoardNum(boardNum) {
     let conn;
 
     try {
       conn = await mariadb.getConnection();
 
-      const query = `SELECT student_id AS studentId, title FROM boards WHERE no = ?;`;
+      const query = `SELECT s.name, b.title FROM boards AS b 
+        JOIN students AS s ON b.student_id = s.id 
+        WHERE b.no = ?;`;
 
       const board = await conn.query(query, [boardNum]);
 
-      return { studentId: board[0].studentId, title: board[0].title };
+      return { recipientName: board[0].name, title: board[0].title };
     } catch (err) {
       throw err;
     } finally {

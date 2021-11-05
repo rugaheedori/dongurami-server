@@ -207,6 +207,7 @@ class ApplicationStorage {
 
   static async findOneByClubNum(clubNum) {
     let conn;
+
     try {
       conn = await mariadb.getConnection();
 
@@ -297,6 +298,28 @@ class ApplicationStorage {
 
       if (updateRejectedApplicant.affectedRows) return true;
       return false;
+    } catch (err) {
+      throw err;
+    } finally {
+      conn?.release();
+    }
+  }
+
+  static async findOneByApplicantIdAndClubNum(userInfo) {
+    let conn;
+
+    try {
+      conn = await mariadb.getConnection();
+
+      const query =
+        'SELECT s.name FROM applicants AS a JOIN students AS s ON a.student_id = s.id WHERE a.student_id = ? AND a.club_no = ?;';
+
+      const applicant = await conn.query(query, [
+        userInfo.applicant,
+        userInfo.clubNum,
+      ]);
+
+      return applicant[0].name;
     } catch (err) {
       throw err;
     } finally {
